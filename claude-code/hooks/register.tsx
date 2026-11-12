@@ -218,7 +218,7 @@ async function openBoard($: EngineInterface, root: string): Promise<void> {
     board = null
   } else {
     // An explicit reopen re-checks signatures (trust may have changed outside).
-    await update($, snap, x => ({ ...x, sigs: {}, error: null }))
+    await update($, snap, x => ({ ...x, sigs: {}, error: null, notice: null }))
   }
   await poll($)
 }
@@ -325,11 +325,38 @@ export function parseOptions(input: string): { opts: Record<string, string>; res
 
 const HELP = [
   '/agent-file-board open [path]                               open the board at or above the working directory (or at path)',
+  '/agent-file-board room <name>                               show the topics of a room (#general, or alice--bob for a direct pair)',
+  '/agent-file-board topic <T001>                              open a topic of the current room',
   '/agent-file-board iam <id>                                  choose the registered participant you post as',
   '/agent-file-board post [--to ID] [--status S] <text>        post in the open topic',
   '/agent-file-board post --new "Title" [--to ID] <text>       start a topic in the open room',
   '/agent-file-board reply <n> [--to ID] [--status S] <text>   reply to message #n of the open topic',
 ].join('\n')
+
+/** `room general`, `room #general` or `room alice--bob`: show that scope's topics. */
+async function goRoom($: EngineInterface, name: string): Promise<string> {
+  if (!board) return 'No board open. Run /agent-file-board open [path] first.'
+  const key = name.replace(/^[#@]/, '')
+  const scope = board.scopes.find(sc => sc.name === key || sc.dir === key)
+  if (!scope) return `No room or direct conversation "${name}". Have: ${board.scopes.map(scopeLabel).join(', ')}.`
+  await update($, view, x => ({ ...x, scope: scope.dir, topic: null, replyTo: null }))
+  await update($, snap, x => ({ ...x, notice: null, error: null }))
+  return topicsText(scope, (await read($, snap)).seen)
+}
+
+/** `topic T001`: open that topic of the current room (marks it read). */
+async function goTopic($: EngineInterface, id: string): Promise<string> {
+  const v = await read($, view)
+  const scope = findScope(board, v.scope)
+  if (!scope) return 'Pick a room first: /agent-file-board room <name>.'
+  const topic = scope.topics.find(t => t.threadId === id.toUpperCase())
+  if (!topic) return `No topic ${id} in ${scopeLabel(scope)}. Have: ${scope.topics.map(t => t.threadId).join(', ')}.`
+  await update($, view, x => ({ ...x, topic: topic.threadId, replyTo: null, toggled: [] }))
+  const paths = new Set(topic.messages.map(m => m.path))
+  await update($, snap, x => ({ ...x, notice: null, error: null, sigs: Object.fromEntries(Object.entries(x.sigs).filter(([path]) => !paths.has(path))) }))
+  await poll($)
+  return `${topic.threadId} ${topic.title}: ${topic.messages.length} message(s).`
+}
 
 async function textView($: EngineInterface): Promise<string> {
   const v = await read($, view)
@@ -347,11 +374,14 @@ async function runCommand($: EngineInterface, args: string): Promise<string> {
     const root = await findRoot($, sub === 'open' ? rest : '')
     if (!root) return rest ? `No .agent-board in ${rest}.` : 'No .agent-board found at or above the working directory. Run /agent-file-board open <path>.'
     await openBoard($, root)
-    const placed = await $.ui.open({ id: PANE, title: `Board · ${baseName(root)}` })
+    // Asked for by the person, so it comes to the front and takes the keyboard.
+    const placed = await $.ui.open({ id: PANE, title: `Board · ${baseName(root)}`, focus: true })
     if (!placed.isPlaced) return `${await textView($)}\n(The terminal is too narrow for the pane; widen it or use the commands below.)\n${HELP}`
     return `Board ${baseName(root)} opened in a pane.`
   }
   if (sub === 'iam') return setIam($, restWords[0] ?? '')
+  if (sub === 'room') return goRoom($, restWords[0] ?? '')
+  if (sub === 'topic') return goTopic($, restWords[0] ?? '')
   if (sub === 'post') {
     const { opts, rest: text } = parseOptions(rest)
     return post($, { text, to: opts['to'], status: opts['status'], newTitle: opts['new'] })
@@ -380,7 +410,7 @@ export const register: Register = (on, opts) => {
     cwd = e.cwd || '.'
     // Runs again on a reload and a /config change: re-check signatures with the new settings.
     await update($, snap, (x): Snap => ({ ...x, sigs: {}, boardctl: 'unknown' }))
-    await $.command.register({ name: COMMAND, description: 'Agent File Board: rooms, topics and messages in a pane', argumentHint: '[open <path> | iam <id> | post <text> | reply <n> <text> | help]' })
+    await $.command.register({ name: COMMAND, description: 'Agent File Board: rooms, topics and messages in a pane', argumentHint: '[open <path> | room <name> | topic <T001> | iam <id> | post <text> | reply <n> <text> | help]' })
     const seconds = Number(options['refreshSeconds'] ?? 10)
     timer?.cancel()
     timer = $.clock.every(Math.max(2, Number.isFinite(seconds) ? seconds : 10) * 1000, () => void poll($))
@@ -476,7 +506,7 @@ export const register: Register = (on, opts) => {
               <Button key={`topic-${t.threadId}`} plain onPress={async () => {
                 await update($, view, x => ({ ...x, topic: t.threadId, replyTo: null, toggled: [] }))
                 const paths = new Set(t.messages.map(m => m.path))
-                await update($, snap, x => ({ ...x, sigs: Object.fromEntries(Object.entries(x.sigs).filter(([path]) => !paths.has(path))) }))
+                await update($, snap, x => ({ ...x, notice: null, error: null, sigs: Object.fromEntries(Object.entries(x.sigs).filter(([path]) => !paths.has(path))) }))
                 await poll($)
               }}>
                 <Text dimColor>{t.threadId} </Text>

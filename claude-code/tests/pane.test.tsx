@@ -339,6 +339,18 @@ test('AC7: the poll redraws only when a message file appears', async ($, on) => 
   expect(await rev()).toBe(first + 1)
 })
 
+test('room and topic subcommands navigate the pane and answer as text', async ($, on) => {
+  await start($, on, makeBoard(), stub())
+  await board($, 'open /proj')
+  expect(await board($, 'room #nope')).toBe('No room or direct conversation "#nope". Have: #product, #signed.')
+  expect(await board($, 'topic T001')).toBe('Pick a room first: /agent-file-board room <name>.')
+  expect(await board($, 'room #product')).toContain('T001 Release plan for v2.0')
+  expect(await board($, 'topic t001')).toBe('T001 Release plan for v2.0: 11 message(s).')
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ type: 'Button', key: 'back' }))?.text).toContain('T001 Release plan for v2.0')
+  await ui.unmount()
+})
+
 test('AC10: when no pane can be placed, /agent-file-board prints the rooms with unread counts', async ($, on) => {
   await start($, on, makeBoard(), stub({ placed: false }))
   const text = await board($, 'open /proj')

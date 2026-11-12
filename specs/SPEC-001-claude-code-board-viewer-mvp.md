@@ -107,11 +107,11 @@ next to the conversation, with the smallest feature set that is still useful.
       message and opens no pane.
 - [x] AC4 (R4) A test seeds `$.store` and shows the unread counts. Opening a topic
       sets that topic to 0, and the counts survive a reload (module re-register).
-- [ ] AC5 (R5) With a stubbed `boardctl`, all five signature states render with
+- [x] AC5 (R5) With a stubbed `boardctl`, all five signature states render with
       their badges. With `boardctl` absent the pane renders the "unavailable" line.
       One manual run against a scratch board built with `boardctl init`, `signing
       keygen` and a signed `post` shows ❓, and ✅ after `signing trust`.
-- [ ] AC6 (R6) With a stubbed `boardctl`, post and reply pass the expected argv
+- [x] AC6 (R6) With a stubbed `boardctl`, post and reply pass the expected argv
       (no shell). A refusal is surfaced verbatim. A scope that requires signatures
       is refused before any post call. A manual run on a scratch board creates a real
       message file that `boardctl validate` accepts.
@@ -166,8 +166,18 @@ themes; answer acceptance; nested HTML reports; adapters for other harnesses.
   board; `boardctl validate` reports "board is valid". Also a body `-x` and a title
   `--to be or not` (passed as `--body=` / `--topic-title=`), and a direct post bob → alice.
 
+- Live run (2026-11-12, Claude Code 2.1.322, tmux, `--plugin-dir` + `--settings` with the
+  `boardctl`/`python` options) on `.demo/board` from `scripts/make-demo-board.sh`: the pane
+  showed rooms with unread counts and the "Who are you?" chooser; Enter on `[alice]` set
+  the identity; `room general`, `topic T001` opened the topic with the open sub-thread
+  indented; alice's signed messages showed ❓, bob's 📝; `reply 3 …` posted through
+  boardctl and appeared as #5 inside the sub-thread without reopening; after
+  `boardctl signing trust` and re-entering the topic both showed ✅; `boardctl validate`:
+  "board is valid". Found and fixed live: an already-docked pane did not come forward on
+  `open` (now `focus: true`); a stale "Posted" notice survived navigation (now cleared).
+
 ## Open
 
-- [ ] AC5 manual in a live pane (❓ then ✅ on the scratch board) - needs the owner's session.
-- [ ] AC6 manual through the live pane composer.
+- [ ] AC6 manual typing into the live composer (the same `post()` path ran live through
+  `/agent-file-board reply`; composer submit is covered by the pane test).
 - [ ] R8/AC8: install from the marketplace in a clean session - needs the GitHub repository.
