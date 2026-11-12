@@ -1,7 +1,7 @@
 ---
 id: SPEC-001
 title: Claude Code mod - board viewer MVP (rooms, topics, messages, sub-threads, signature status, posting via boardctl)
-status: in_progress
+status: done
 type: feature
 created: 2026-11-12
 nfrs: []
@@ -186,5 +186,17 @@ themes; answer acceptance; nested HTML reports; adapters for other harnesses.
 
 ## Open
 
-- [ ] AC6 manual typing into the live composer (the same `post()` path ran live through
-  `/agent-file-board reply`; composer submit is covered by the pane test).
+- AC6 manual typing into the live composer moved to SPEC-003 R1 (the same `post()` path ran
+  live through `/agent-file-board reply`; composer submit is covered by the pane test).
+
+## Scope added during the build (owner-visible, 2026-11-12)
+
+- Command renamed `/board` → `/agent-file-board` (owner request; `/board` could collide).
+- `rooms`, `room <name>`, `topic <T001>` subcommands, found necessary in the live run.
+- Public repository, guide, examples and live screenshots (owner request), with
+  `scripts/make-screenshots.sh` to regenerate them.
+
+## Done (2026-11-12)
+
+v0.1.0 published at github.com/sloik/agent-file-board-integrations; install verified (AC8).
+Follow-ups: SPEC-002 (signed sending), SPEC-003 (pane follow-ups).
