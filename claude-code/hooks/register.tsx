@@ -32,6 +32,7 @@ const snap = atom({ plugin: 'agent-file-board', key: 'snap' } as const, EMPTY_SN
 let options: PluginOptions = {}
 let cwd = '.'
 let busy = false
+let again = false
 let lastKey = ''
 let timer: Timer | null = null
 let board: Board | null = null // the parsed board of view.root; Snap.rev marks its changes
@@ -138,9 +139,14 @@ export function badgeFor(result: Record<string, unknown>): Sig {
   return { badge: 'invalid', reason }
 }
 
-/** Checks each signed message of the open topic once; unsigned ones need no check. */
-async function checkSignatures($: EngineInterface, root: string, topic: Topic, known: Record<string, Sig>): Promise<{ sigs: Record<string, Sig>; boardctl: Snap['boardctl'] } | null> {
-  const todo = topic.messages.filter(m => m.hasSignature && !known[m.path])
+/**
+ * Checks the signed messages of the open topic. A definite answer is kept until
+ * the topic is entered again, the board is reopened or the mod reloads (a
+ * `/config` change); an `unavailable` one is asked again on every poll, so fixing
+ * the Python or boardctl path shows at once. Unsigned messages need no check.
+ */
+async function checkSignatures($: EngineInterface, root: string, topic: Topic, known: Record<string, Sig>, was: Snap['boardctl']): Promise<{ sigs: Record<string, Sig>; boardctl: Snap['boardctl'] } | null> {
+  const todo = topic.messages.filter(m => m.hasSignature && (!known[m.path] || known[m.path]!.badge === 'unavailable'))
   if (todo.length === 0) return null
   const sigs = { ...known }
   let status: Snap['boardctl'] = 'ok'
@@ -156,12 +162,17 @@ async function checkSignatures($: EngineInterface, root: string, topic: Topic, k
       sigs[m.path] = { badge: 'unavailable', reason: (r.stderr || r.stdout).trim().slice(0, 160) }
     }
   }
+  if (status === was && JSON.stringify(sigs) === JSON.stringify(known)) return null
   return { sigs, boardctl: status }
 }
 
 async function poll($: EngineInterface): Promise<void> {
-  if (busy) return
+  if (busy) {
+    again = true // a post or a press asked for fresh data mid-poll: run once more after
+    return
+  }
   busy = true
+  again = false
   try {
     const v = await read($, view)
     if (!v.root) return
@@ -181,7 +192,7 @@ async function poll($: EngineInterface): Promise<void> {
         s = { ...s, seen }
         changed = true
       }
-      const checked = await checkSignatures($, v.root, topic, s.sigs)
+      const checked = await checkSignatures($, v.root, topic, s.sigs, s.boardctl)
       if (checked) {
         s = { ...s, ...checked }
         changed = true
@@ -193,6 +204,7 @@ async function poll($: EngineInterface): Promise<void> {
   } finally {
     busy = false
   }
+  if (again) await poll($)
 }
 
 async function openBoard($: EngineInterface, root: string): Promise<void> {
@@ -204,6 +216,9 @@ async function openBoard($: EngineInterface, root: string): Promise<void> {
     await update($, snap, () => ({ ...EMPTY_SNAP, seen, iam }))
     lastKey = ''
     board = null
+  } else {
+    // An explicit reopen re-checks signatures (trust may have changed outside).
+    await update($, snap, x => ({ ...x, sigs: {}, error: null }))
   }
   await poll($)
 }
@@ -218,15 +233,19 @@ async function setIam($: EngineInterface, id: string): Promise<string> {
   return `You post as ${id} on ${v.label}.`
 }
 
+/** Next thread ID: one above the highest thread number in all message filenames, invalid ones included. */
 function nextThreadId(board: Board): string {
   let max = 0
   let width = 3
-  for (const scope of board.scopes) {
-    for (const t of scope.topics) {
-      const digits = t.threadId.slice(1)
-      max = Math.max(max, Number(digits))
-      width = Math.max(width, digits.length)
-    }
+  const names = [
+    ...board.scopes.flatMap(sc => sc.topics.flatMap(t => t.messages.map(m => m.name))),
+    ...board.invalid.map(i => i.name),
+  ]
+  for (const name of names) {
+    const digits = /_T(\d+)_/.exec(name)?.[1]
+    if (!digits) continue
+    max = Math.max(max, Number(digits))
+    width = Math.max(width, digits.length)
   }
   return `T${String(max + 1).padStart(width, '0')}`
 }
@@ -274,10 +293,11 @@ async function post($: EngineInterface, req: PostRequest): Promise<string> {
     '--scope', scope.kind === 'direct' ? 'direct' : 'room',
     ...(scope.kind === 'room' ? ['--room', scope.name] : []),
     '--thread', thread, '--slug', slugFor(req.newTitle ?? text), '--status', status,
-    '--body', text, '--runtime', 'claude-code',
+    // `=` keeps a body or title that starts with `-` from being read as an option.
+    `--body=${text}`, '--runtime', 'claude-code',
     ...(target ? ['--reply-to', target.name] : []),
     ...(target?.subthread ? ['--subthread', target.subthread] : []),
-    ...(req.newTitle ? ['--new-thread', '--topic-title', req.newTitle] : []),
+    ...(req.newTitle ? ['--new-thread', `--topic-title=${req.newTitle}`] : []),
   ]
   const r = await boardctl($, argv)
   if (!r) return fail('boardctl not found: set its path in /config (agent-file-board).')
@@ -358,6 +378,8 @@ export const register: Register = (on, opts) => {
 
   on('session.start', async ($, e, next) => {
     cwd = e.cwd || '.'
+    // Runs again on a reload and a /config change: re-check signatures with the new settings.
+    await update($, snap, (x): Snap => ({ ...x, sigs: {}, boardctl: 'unknown' }))
     await $.command.register({ name: COMMAND, description: 'Agent File Board: rooms, topics and messages in a pane (/board help)' })
     const seconds = Number(options['refreshSeconds'] ?? 10)
     timer?.cancel()
@@ -453,6 +475,8 @@ export const register: Register = (on, opts) => {
             return (
               <Button key={`topic-${t.threadId}`} plain onPress={async () => {
                 await update($, view, x => ({ ...x, topic: t.threadId, replyTo: null, toggled: [] }))
+                const paths = new Set(t.messages.map(m => m.path))
+                await update($, snap, x => ({ ...x, sigs: Object.fromEntries(Object.entries(x.sigs).filter(([path]) => !paths.has(path))) }))
                 await poll($)
               }}>
                 <Text dimColor>{t.threadId} </Text>

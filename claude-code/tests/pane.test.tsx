@@ -29,7 +29,7 @@ const SIGNED = [
 
 type Board = Map<string, string> // full path → text
 type Calls = { argv: string[][]; opened: number; revs: number[] }
-type Stub = { placed: boolean; missing: boolean; requirement: string }
+type Stub = { placed: boolean; missing: boolean; requirement: string; fixed?: boolean }
 
 function makeBoard(): Board {
   const fs: Board = new Map()
@@ -93,6 +93,8 @@ async function start($: Engine, on: On, fs: Board, stub: Stub, store: Record<str
     if (args[0] === 'signing' && args[1] === 'inspect') {
       const path = args[args.indexOf('--message') + 1]!
       const i = SIGNED.findIndex(([badge]) => path.includes(`_${badge}.txt`))
+      // `fixed`: the person has since installed PyNaCl, so the unavailable one verifies.
+      if (stub.fixed && SIGNED[i]?.[0] === 'unavailable') return run(JSON.stringify(SIGNED[0][1]))
       return run(JSON.stringify(SIGNED[i]?.[1] ?? { signature: 'unsigned', eligibility: 'eligible' }))
     }
     if (args[0] === 'signing' && args[1] === 'check') {
@@ -106,7 +108,8 @@ async function start($: Engine, on: On, fs: Board, stub: Stub, store: Record<str
       const thread = args[args.indexOf('--thread') + 1]!
       const slug = args[args.indexOf('--slug') + 1]!
       const name = `2026-11-05_1200_${from}_${thread}_${slug}.txt`
-      fs.set(`${BASE}/rooms/${room}/${name}`, `FROM: ${from}\nTO: all\nSCOPE: ROOM\nROOM: ${room}\nTHREAD: ${thread}-x\nDATE: 2026-11-05 12:00\nSTATUS: INFO\n---\n${args[args.indexOf('--body') + 1]}`)
+      const body = args.find(a => a.startsWith('--body='))!.slice('--body='.length)
+      fs.set(`${BASE}/rooms/${room}/${name}`, `FROM: ${from}\nTO: all\nSCOPE: ROOM\nROOM: ${room}\nTHREAD: ${thread}-x\nDATE: 2026-11-05 12:00\nSTATUS: INFO\n---\n${body}`)
       return run(`.agent-board/rooms/${room}/${name}\n`)
     }
     return run('{}')
@@ -204,6 +207,29 @@ test('AC5: all five signature badges; inspect runs once per signed message', asy
   await ui.unmount()
 })
 
+test('AC5: definite badges are kept, unavailable ones re-checked; re-entering a topic re-checks all', async ($, on) => {
+  const s = stub()
+  const { calls, clock } = await start($, on, makeBoard(), s)
+  await board($, 'open /proj')
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'scope-rooms/signed' })
+  await ui.press({ key: 'topic-T009' })
+  const inspected = (badge: string) => calls.argv.filter(a => a[3] === 'inspect' && a[a.length - 1]!.endsWith(`_${badge}.txt`)).length
+  await clock.advance(10000)
+  await clock.advance(10000)
+  for (const badge of ['verified', 'unapproved', 'invalid']) expect(inspected(badge)).toBe(1)
+  expect(inspected('unavailable')).toBe(3)
+  // PyNaCl installed: the next poll turns ⏳ into ✅ without any press.
+  s.fixed = true
+  await clock.advance(10000)
+  expect(await ui.find({ type: 'Text', text: /could not be checked/ })).toBeUndefined()
+  // Re-entering the topic asks boardctl again for every signed message.
+  await ui.press({ key: 'back' })
+  await ui.press({ key: 'topic-T009' })
+  for (const badge of ['verified', 'unapproved', 'invalid']) expect(inspected(badge)).toBe(2)
+  await ui.unmount()
+})
+
 test('AC5: without boardctl the pane still renders and says signatures are unavailable', async ($, on) => {
   await start($, on, makeBoard(), stub({ missing: true }))
   await board($, 'open /proj')
@@ -243,7 +269,7 @@ test('AC6 + AC9: identity first, then post and reply pass the expected argv', as
   expect(await board($, 'post --status QUESTION Ready for Thursday?')).toBe('Posted as bravo-agent: .agent-board/rooms/product/2026-11-05_1200_bravo-agent_T001_ready-for-thursday.txt')
   const posts = calls.argv.filter(a => a[2] === 'post')
   expect(posts[0]).toEqual(['/usr/bin/env', 'boardctl', 'post', '--path', '/proj', '--from', 'bravo-agent', '--to', 'all', '--scope', 'room', '--room', 'product',
-    '--thread', 'T001', '--slug', 'ready-for-thursday', '--status', 'QUESTION', '--body', 'Ready for Thursday?', '--runtime', 'claude-code'])
+    '--thread', 'T001', '--slug', 'ready-for-thursday', '--status', 'QUESTION', '--body=Ready for Thursday?', '--runtime', 'claude-code'])
   // The signing check ran first, for the same sender, scope and thread.
   const check = calls.argv.find(a => a[3] === 'check')!
   expect(check.slice(2)).toEqual(['signing', 'check', '--path', '/proj', '--from', 'bravo-agent', '--scope', 'rooms/product', '--thread', 'T001'])
@@ -291,7 +317,7 @@ test('AC6: a new topic gets the next thread ID and an explicit title', async ($,
   await board($, 'post --new "Launch checklist" First item')
   const argv = calls.argv.filter(a => a[2] === 'post')[0]!
   expect(argv.slice(argv.indexOf('--thread'), argv.indexOf('--thread') + 4)).toEqual(['--thread', 'T010', '--slug', 'launch-checklist'])
-  expect(argv.slice(-3)).toEqual(['--new-thread', '--topic-title', 'Launch checklist'])
+  expect(argv.slice(-2)).toEqual(['--new-thread', '--topic-title=Launch checklist'])
   await ui.unmount()
 })
 

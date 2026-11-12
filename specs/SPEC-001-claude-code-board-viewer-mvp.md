@@ -146,8 +146,11 @@ themes; answer acceptance; nested HTML reports; adapters for other harnesses.
 
 ## Evidence (2026-11-12)
 
-- `claude plugin test claude-code`: 18 pass, 0 fail (`tests/core.test.ts` AC1;
-  `tests/pane.test.tsx` AC3-AC7, AC9, AC10).
+- `claude plugin test claude-code`: 19 pass, 0 fail (`tests/core.test.ts` AC1;
+  `tests/pane.test.tsx` AC3-AC7, AC9, AC10). The AC5 cache test goes red when the
+  re-check of `unavailable` badges is removed (mutation run).
+- AC4 reload: read markers and identity live in `$.store` (the seeded-store test reads them
+  back as a new session would); view and badges live in `$.state`, which a reload keeps.
 - `claude plugin validate claude-code` and `claude plugin validate .` (marketplace): pass.
 - `scripts/typecheck.sh <claude-code.d.ts>` (Claude Code 2.1.322 types): clean; goes red on an
   injected type error.
@@ -160,7 +163,8 @@ themes; answer acceptance; nested HTML reports; adapters for other harnesses.
   `pending-verification/unavailable` from a Python without PyNaCl.
 - AC6 manual: the argv the mod builds (post, reply, new topic with `--new-thread --topic-title`,
   sub-thread member reply with `--reply-to <member> --subthread <root>`) ran against the scratch
-  board; `boardctl validate` reports "board is valid".
+  board; `boardctl validate` reports "board is valid". Also a body `-x` and a title
+  `--to be or not` (passed as `--body=` / `--topic-title=`), and a direct post bob → alice.
 
 ## Open
 
