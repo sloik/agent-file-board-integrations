@@ -49,7 +49,7 @@ next to the conversation, with the smallest feature set that is still useful.
 
 ## Requirements
 
-- [ ] R1 `core/` parses a board folder into a model: rooms (`rooms/<room>/`) and
+- [x] R1 `core/` parses a board folder into a model: rooms (`rooms/<room>/`) and
       direct pairs (`direct/<a>--<b>/`), and in each, topics grouped by `THREAD`.
       It honours the current topic title rule, header fields (`FROM`, `TO`, `DATE`,
       `STATUS`, `REPLY-TO`) and the body. It reads the sub-thread headers
@@ -57,35 +57,35 @@ next to the conversation, with the smallest feature set that is still useful.
       CONVENTION.md "Sub-threads (3.4)". `.DS_Store` is ignored. An invalid file is
       shown as invalid, never dropped silently. `core/` imports no harness API: its
       input is file names and text, its output is plain data.
-- [ ] R2 `/board open [path]` opens a pane titled with the board's folder label.
+- [x] R2 `/board open [path]` opens a pane titled with the board's folder label.
       `path` defaults to `./.agent-board`, then to the nearest ancestor that has one.
       Without a board the command answers with a clear message and opens nothing.
-- [ ] R3 The pane navigates rooms/direct pairs, then topics (newest activity
+- [x] R3 The pane navigates rooms/direct pairs, then topics (newest activity
       first), then messages in posting order. Sub-thread messages are indented
       under their root, and a resolved sub-thread is collapsed. Keyboard navigation
       works and Back returns one level.
-- [ ] R4 Unread state: an unread count per room and topic, kept per board in the
+- [x] R4 Unread state: an unread count per room and topic, kept per board in the
       mod's `$.store`, outside the repository (CONVENTION: read markers live outside
       it). Opening a topic marks it read.
-- [ ] R5 Signature status per message: ✅ verified, ❓ verified but key not approved,
+- [x] R5 Signature status per message: ✅ verified, ❓ verified but key not approved,
       ⚠️ invalid or excluded (with boardctl's reason), ⏳ verification unavailable,
       📝 unsigned. The status comes from `boardctl` (`signing inspect`
       or the equivalent batch output), never from crypto inside the mod.
       When `boardctl` is missing the pane still renders and shows "signatures:
       unavailable (boardctl not found)".
-- [ ] R6 `/board post` and `/board reply <message>` create a message through
+- [x] R6 `/board post` and `/board reply <message>` create a message through
       `boardctl post` with the chosen room/topic, `TO`, `STATUS` and body. The new
       file appears in the pane without reopening it. A `boardctl` refusal is shown
       verbatim and nothing is written by the mod itself. When the scope requires
       signatures (`boardctl signing check`), v0.1 refuses before posting and says
       that signed sending arrives in SPEC-002.
-- [ ] R7 Refresh: the open pane rescans on a timer (default 10 s, configurable)
+- [x] R7 Refresh: the open pane rescans on a timer (default 10 s, configurable)
       and redraws only when something changed.
-- [ ] R9 Identity ("I am"): before the first post on a board, the mod asks which
+- [x] R9 Identity ("I am"): before the first post on a board, the mod asks which
       registered participant (from `participants.json`) the person is, and stores the
       answer per board in `$.store`. `/board iam <id>` changes it. Posting without a
       chosen identity is refused with that hint.
-- [ ] R10 Narrow terminal: when `$.ui.open` resolves `{ isPlaced: false }`,
+- [x] R10 Narrow terminal: when `$.ui.open` resolves `{ isPlaced: false }`,
       `/board` prints the current view (rooms or topics with unread counts) as
       command text instead, so the board is usable at any width.
 - [ ] R8 Install: the repository root has `.claude-plugin/marketplace.json`, and the
@@ -93,19 +93,19 @@ next to the conversation, with the smallest feature set that is still useful.
 
 ## Acceptance criteria
 
-- [ ] AC1 (R1) `core` unit tests over fixture boards packed from agent-file-board
+- [x] AC1 (R1) `core` unit tests over fixture boards packed from agent-file-board
       `examples/subthreads` and `examples/full-conversation` (no `config.json`; with a
       direct pair) by a generator script with a freshness check, produce the expected rooms, topics, titles, message order and sub-thread tree.
       A malformed fixture message is reported as invalid. The fixture includes a
       `.DS_Store`, which is ignored.
-- [ ] AC2 (R1) `tsc` passes, and a check proves `core/` imports nothing outside
+- [x] AC2 (R1) `tsc` passes, and a check proves `core/` imports nothing outside
       `core/`. Non-vacuity: adding an import of `'claude-code'` to a `core/` file
       makes the check fail.
-- [ ] AC3 (R2, R3) `claude plugin test` cases: `/board open` on the fixture
+- [x] AC3 (R2, R3) `claude plugin test` cases: `/board open` on the fixture
       opens the pane, and the rendered tree shows rooms → topics → messages with an
       indented sub-thread. Back works. `/board open` without a board returns the
       message and opens no pane.
-- [ ] AC4 (R4) A test seeds `$.store` and shows the unread counts. Opening a topic
+- [x] AC4 (R4) A test seeds `$.store` and shows the unread counts. Opening a topic
       sets that topic to 0, and the counts survive a reload (module re-register).
 - [ ] AC5 (R5) With a stubbed `boardctl`, all five signature states render with
       their badges. With `boardctl` absent the pane renders the "unavailable" line.
@@ -115,12 +115,12 @@ next to the conversation, with the smallest feature set that is still useful.
       (no shell). A refusal is surfaced verbatim. A scope that requires signatures
       is refused before any post call. A manual run on a scratch board creates a real
       message file that `boardctl validate` accepts.
-- [ ] AC7 (R7) A test advances `$.clock`: no redraw without a change, one redraw
+- [x] AC7 (R7) A test advances `$.clock`: no redraw without a change, one redraw
       after a new message file appears.
-- [ ] AC9 (R9) Test: posting without an identity is refused with the hint.
+- [x] AC9 (R9) Test: posting without an identity is refused with the hint.
       `/board iam` with an unregistered id is refused. A chosen id is used as
       `--from` and survives a reload.
-- [ ] AC10 (R10) Test: with `ui.open` answering `{ isPlaced: false }`, `/board open`
+- [x] AC10 (R10) Test: with `ui.open` answering `{ isPlaced: false }`, `/board open`
       returns the room list with unread counts as text.
 - [ ] AC8 (R8) `claude plugin validate claude-code/` reports no errors, and an install
       from the marketplace file in a clean session loads the mod.
@@ -143,3 +143,27 @@ Signed sending and key unlock (SPEC-002); OpenUI reports and typed forms;
 extensions; repair/upgrade/history inventories; follow, claims, presence; drafts;
 themes; answer acceptance; nested HTML reports; adapters for other harnesses.
 
+
+## Evidence (2026-11-12)
+
+- `claude plugin test claude-code`: 18 pass, 0 fail (`tests/core.test.ts` AC1;
+  `tests/pane.test.tsx` AC3-AC7, AC9, AC10).
+- `claude plugin validate claude-code` and `claude plugin validate .` (marketplace): pass.
+- `scripts/typecheck.sh <claude-code.d.ts>` (Claude Code 2.1.322 types): clean; goes red on an
+  injected type error.
+- AC2: `node scripts/check-core-purity.mjs` passes; `--self-test` detects all 3 mutations
+  (`'claude-code'`, `node:fs`, `../hooks/register`).
+- AC1 fixtures: `node scripts/pack-fixtures.mjs <agent-file-board> --check` current.
+- AC5 inputs: badge mapping exercised with the exact `signing inspect` JSON shapes observed on a
+  scratch board (`boardctl init`, `signing keygen`, `identity import`, signed `post`):
+  `valid/unfamiliar` before `signing trust`, `valid/trusted` after, and
+  `pending-verification/unavailable` from a Python without PyNaCl.
+- AC6 manual: the argv the mod builds (post, reply, new topic with `--new-thread --topic-title`,
+  sub-thread member reply with `--reply-to <member> --subthread <root>`) ran against the scratch
+  board; `boardctl validate` reports "board is valid".
+
+## Open
+
+- [ ] AC5 manual in a live pane (❓ then ✅ on the scratch board) - needs the owner's session.
+- [ ] AC6 manual through the live pane composer.
+- [ ] R8/AC8: install from the marketplace in a clean session - needs the GitHub repository.
