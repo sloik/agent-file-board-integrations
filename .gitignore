@@ -1,0 +1,5 @@
+node_modules/
+*.log
+.DS_Store
+# engine-written type files of a loaded mod
+claude-code/.claude-plugin/types/
