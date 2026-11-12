@@ -348,6 +348,8 @@ test('room and topic subcommands navigate the pane and answer as text', async ($
   expect(await board($, 'topic t001')).toBe('T001 Release plan for v2.0: 11 message(s).')
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect((await ui.find({ type: 'Button', key: 'back' }))?.text).toContain('T001 Release plan for v2.0')
+  expect(await board($, 'rooms')).toContain('#product  2 topic(s)')
+  expect(await ui.find({ type: 'Button', key: 'scope-rooms/product' })).toBeDefined()
   await ui.unmount()
 })
 

@@ -15,6 +15,11 @@ DEMO="$HERE/.demo"
 B="$DEMO/board"
 "$PY" -c "import nacl, cryptography" || { echo "make-demo-board: $PY lacks requirements-signing.txt" >&2; exit 2; }
 rm -rf "$B" "$DEMO/keys"; mkdir -p "$B" "$DEMO/keys"
+# A rebuilt board gets a new board UUID; boardctl refuses to reuse private trust state
+# kept for the old one at this path (by design). Remove only this demo board's state file.
+STATE=${AGENT_FILE_BOARD_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/agent-file-board}
+KEY=$("$PY" -c "import hashlib,pathlib,sys;print(hashlib.sha256(str(pathlib.Path(sys.argv[1]).resolve()).encode()).hexdigest())" "$B")
+rm -f "$STATE/signing/$KEY.json"
 "$PY" "$BC" init "$B" --project-id afb-demo-$(date +%s) --project-name "AFB demo" >/dev/null
 "$PY" "$BC" join --path "$B" --kind human alice >/dev/null
 "$PY" "$BC" join --path "$B" --kind agent bob >/dev/null

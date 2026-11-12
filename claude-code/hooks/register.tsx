@@ -325,6 +325,7 @@ export function parseOptions(input: string): { opts: Record<string, string>; res
 
 const HELP = [
   '/agent-file-board open [path]                               open the board at or above the working directory (or at path)',
+  '/agent-file-board rooms                                     back to the list of rooms and direct conversations',
   '/agent-file-board room <name>                               show the topics of a room (#general, or alice--bob for a direct pair)',
   '/agent-file-board topic <T001>                              open a topic of the current room',
   '/agent-file-board iam <id>                                  choose the registered participant you post as',
@@ -380,6 +381,11 @@ async function runCommand($: EngineInterface, args: string): Promise<string> {
     return `Board ${baseName(root)} opened in a pane.`
   }
   if (sub === 'iam') return setIam($, restWords[0] ?? '')
+  if (sub === 'rooms') {
+    await update($, view, x => ({ ...x, scope: null, topic: null, replyTo: null }))
+    await update($, snap, x => ({ ...x, notice: null, error: null }))
+    return textView($)
+  }
   if (sub === 'room') return goRoom($, restWords[0] ?? '')
   if (sub === 'topic') return goTopic($, restWords[0] ?? '')
   if (sub === 'post') {
@@ -410,7 +416,7 @@ export const register: Register = (on, opts) => {
     cwd = e.cwd || '.'
     // Runs again on a reload and a /config change: re-check signatures with the new settings.
     await update($, snap, (x): Snap => ({ ...x, sigs: {}, boardctl: 'unknown' }))
-    await $.command.register({ name: COMMAND, description: 'Agent File Board: rooms, topics and messages in a pane', argumentHint: '[open <path> | room <name> | topic <T001> | iam <id> | post <text> | reply <n> <text> | help]' })
+    await $.command.register({ name: COMMAND, description: 'Agent File Board: rooms, topics and messages in a pane', argumentHint: '[open <path> | rooms | room <name> | topic <T001> | iam <id> | post <text> | reply <n> <text> | help]' })
     const seconds = Number(options['refreshSeconds'] ?? 10)
     timer?.cancel()
     timer = $.clock.every(Math.max(2, Number.isFinite(seconds) ? seconds : 10) * 1000, () => void poll($))
@@ -552,19 +558,22 @@ export const register: Register = (on, opts) => {
               : { badge: 'unsigned', reason: '' }
             return (
               <Box key={`m-${m.name}`} flexDirection="column" marginLeft={entry.depth * 4} marginTop={1} width={cols - entry.depth * 4}>
+                {/* One line that never squeezes; the explanation of a badge goes on its own line. */}
                 <Box>
-                  <Text dimColor>#{n} {m.date} </Text>
-                  <Text bold>{m.from}</Text>
-                  <Text dimColor> → {m.to} </Text>
-                  <Text color={m.status === 'QUESTION' || m.status === 'DECISION-NEEDED' || m.status === 'REQUEST' ? 'warning' : undefined}>{m.status}</Text>
-                  <Text> {BADGE[sig.badge]}</Text>
-                  {sig.badge !== 'unsigned' && sig.badge !== 'verified' && <Text dimColor wrap="truncate-end"> {BADGE_TEXT[sig.badge]}{sig.reason && sig.reason !== 'verified' ? `: ${sig.reason}` : ''}</Text>}
-                  {entry.orphan && <Text color="warning"> orphan</Text>}
+                  <Text dimColor wrap="truncate-end">#{n} {m.date} </Text>
+                  <Box flexShrink={0}><Text bold>{m.from}</Text></Box>
+                  <Box flexShrink={0}><Text dimColor> → {m.to} </Text></Box>
+                  <Box flexShrink={0}><Text color={m.status === 'QUESTION' || m.status === 'DECISION-NEEDED' || m.status === 'REQUEST' ? 'warning' : undefined}>{m.status}</Text></Box>
+                  <Box flexShrink={0}><Text> {BADGE[sig.badge]}</Text></Box>
+                  {entry.orphan && <Box flexShrink={0}><Text color="warning"> orphan</Text></Box>}
                   <Text dimColor>  </Text>
                   <Button key={`re-${n}`} plain onPress={() => update($, view, x => ({ ...x, replyTo: m.name }))}>
                     <Text dimColor>↩</Text>
                   </Button>
                 </Box>
+                {sig.badge !== 'unsigned' && sig.badge !== 'verified' && (
+                  <Text dimColor wrap="truncate-end">{BADGE_TEXT[sig.badge]}{sig.reason && sig.reason !== 'verified' ? `: ${sig.reason}` : ''}</Text>
+                )}
                 <Text wrap="wrap">{m.body}</Text>
               </Box>
             )
