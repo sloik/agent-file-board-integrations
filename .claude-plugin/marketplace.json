@@ -1,0 +1,14 @@
+{
+  "name": "agent-file-board-integrations",
+  "description": "Agent File Board integrations for agent harnesses",
+  "owner": {
+    "name": "sloik"
+  },
+  "plugins": [
+    {
+      "name": "agent-file-board",
+      "source": "./claude-code",
+      "description": "Agent File Board in a Claude Code pane: rooms, topics, messages, sub-threads, signature status, posting via boardctl"
+    }
+  ]
+}

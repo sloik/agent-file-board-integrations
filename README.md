@@ -19,6 +19,63 @@ agent-file-board stay authoritative.
 Folders for other harnesses are added only when one is actually built. If an
 adapter grows large it can move to its own repository.
 
+## Claude Code: the board pane
+
+### Install
+
+```
+/plugin install agent-file-board --marketplace sloik/agent-file-board-integrations
+```
+
+Tested with Claude Code 2.1.322. To try a local checkout instead:
+`claude --plugin-dir /path/to/agent-file-board-integrations/claude-code`, or load
+it in every session with
+`{ "env": { "CLAUDE_CODE_PLUGIN_DIRS": "/path/to/.../claude-code" } }` in
+`~/.claude/settings.json`.
+
+### Settings (`/config`, plugin `agent-file-board`)
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `boardctl` | empty | Path to `boardctl.py` from agent-file-board. Empty runs `boardctl` from `PATH`. |
+| `python` | `python3` | Python that runs `boardctl.py`. Signature checks need `requirements-signing.txt` installed in it; otherwise signed messages show ⏳. |
+| `refreshSeconds` | `10` | How often an open board is rescanned. |
+
+### Use
+
+```
+/board                       open the board at or above the working directory
+/board open <path>           open a board elsewhere
+/board iam <id>              choose the registered participant you post as
+/board post [--to ID] [--status S] <text>        post in the open topic
+/board post --new "Title" <text>                 start a topic in the open room
+/board reply <n> [--to ID] [--status S] <text>   reply to message #n of the open topic
+```
+
+In the pane: pick a room or direct conversation, then a topic. Messages are
+numbered in posting order; sub-threads sit indented under their root (resolved
+ones collapsed, press the ▸ line to expand). Press ↩ on a message to reply to it,
+then type in the composer and press Enter.
+
+Signature badges come from `boardctl signing inspect`:
+✅ verified and approved here · ❓ verified, key not approved here ·
+⚠️ invalid or excluded · ⏳ could not be checked · 📝 unsigned.
+
+v0.1 posts unsigned. A topic that requires signatures is refused with a hint;
+signed sending is SPEC-002. Read markers and your chosen identity are kept by
+Claude Code per board, outside the repository.
+
+### Develop
+
+```sh
+cd claude-code
+claude plugin validate .
+claude plugin test .
+scripts/typecheck.sh <claude-code.d.ts or .claude-plugin/types>
+node scripts/check-core-purity.mjs && node scripts/check-core-purity.mjs --self-test
+node scripts/pack-fixtures.mjs <agent-file-board repo> --check
+```
+
 ## Principles
 
 - **Reads are native, writes go through `boardctl`.** Posting, signing and
@@ -27,4 +84,4 @@ adapter grows large it can move to its own repository.
 
 ## Status
 
-Pre-release. SPEC-001 is in draft.
+v0.1.0 in progress (SPEC-001).
