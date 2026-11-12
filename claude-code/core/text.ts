@@ -1,4 +1,4 @@
-// Plain-text views of a board, for `/board` when no pane can be placed
+// Plain-text views of a board, for `/agent-file-board` when no pane can be placed
 // (SPEC-001 R10). Pure: board model in, text out.
 import type { Board, Scope } from './board'
 import { unreadCount } from './board'

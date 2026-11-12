@@ -57,7 +57,7 @@ next to the conversation, with the smallest feature set that is still useful.
       CONVENTION.md "Sub-threads (3.4)". `.DS_Store` is ignored. An invalid file is
       shown as invalid, never dropped silently. `core/` imports no harness API: its
       input is file names and text, its output is plain data.
-- [x] R2 `/board open [path]` opens a pane titled with the board's folder label.
+- [x] R2 `/agent-file-board open [path]` opens a pane titled with the board's folder label.
       `path` defaults to `./.agent-board`, then to the nearest ancestor that has one.
       Without a board the command answers with a clear message and opens nothing.
 - [x] R3 The pane navigates rooms/direct pairs, then topics (newest activity
@@ -73,7 +73,7 @@ next to the conversation, with the smallest feature set that is still useful.
       or the equivalent batch output), never from crypto inside the mod.
       When `boardctl` is missing the pane still renders and shows "signatures:
       unavailable (boardctl not found)".
-- [x] R6 `/board post` and `/board reply <message>` create a message through
+- [x] R6 `/agent-file-board post` and `/agent-file-board reply <message>` create a message through
       `boardctl post` with the chosen room/topic, `TO`, `STATUS` and body. The new
       file appears in the pane without reopening it. A `boardctl` refusal is shown
       verbatim and nothing is written by the mod itself. When the scope requires
@@ -83,10 +83,10 @@ next to the conversation, with the smallest feature set that is still useful.
       and redraws only when something changed.
 - [x] R9 Identity ("I am"): before the first post on a board, the mod asks which
       registered participant (from `participants.json`) the person is, and stores the
-      answer per board in `$.store`. `/board iam <id>` changes it. Posting without a
+      answer per board in `$.store`. `/agent-file-board iam <id>` changes it. Posting without a
       chosen identity is refused with that hint.
 - [x] R10 Narrow terminal: when `$.ui.open` resolves `{ isPlaced: false }`,
-      `/board` prints the current view (rooms or topics with unread counts) as
+      `/agent-file-board` prints the current view (rooms or topics with unread counts) as
       command text instead, so the board is usable at any width.
 - [ ] R8 Install: the repository root has `.claude-plugin/marketplace.json`, and the
       README gives the one-line `/plugin install` command.
@@ -101,9 +101,9 @@ next to the conversation, with the smallest feature set that is still useful.
 - [x] AC2 (R1) `tsc` passes, and a check proves `core/` imports nothing outside
       `core/`. Non-vacuity: adding an import of `'claude-code'` to a `core/` file
       makes the check fail.
-- [x] AC3 (R2, R3) `claude plugin test` cases: `/board open` on the fixture
+- [x] AC3 (R2, R3) `claude plugin test` cases: `/agent-file-board open` on the fixture
       opens the pane, and the rendered tree shows rooms → topics → messages with an
-      indented sub-thread. Back works. `/board open` without a board returns the
+      indented sub-thread. Back works. `/agent-file-board open` without a board returns the
       message and opens no pane.
 - [x] AC4 (R4) A test seeds `$.store` and shows the unread counts. Opening a topic
       sets that topic to 0, and the counts survive a reload (module re-register).
@@ -118,9 +118,9 @@ next to the conversation, with the smallest feature set that is still useful.
 - [x] AC7 (R7) A test advances `$.clock`: no redraw without a change, one redraw
       after a new message file appears.
 - [x] AC9 (R9) Test: posting without an identity is refused with the hint.
-      `/board iam` with an unregistered id is refused. A chosen id is used as
+      `/agent-file-board iam` with an unregistered id is refused. A chosen id is used as
       `--from` and survives a reload.
-- [x] AC10 (R10) Test: with `ui.open` answering `{ isPlaced: false }`, `/board open`
+- [x] AC10 (R10) Test: with `ui.open` answering `{ isPlaced: false }`, `/agent-file-board open`
       returns the room list with unread counts as text.
 - [ ] AC8 (R8) `claude plugin validate claude-code/` reports no errors, and an install
       from the marketplace file in a clean session loads the mod.

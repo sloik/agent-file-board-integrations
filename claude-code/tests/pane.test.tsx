@@ -73,7 +73,7 @@ async function start($: Engine, on: On, fs: Board, stub: Stub, store: Record<str
     if ((write.ref?.key ?? write.key) === 'snap') calls.revs.push(write.value?.value?.rev ?? write.value?.rev ?? -1)
     return next(e)
   })
-  on('command.register', () => ({ value: { command: 'board' } }))
+  on('command.register', () => ({ value: { command: 'agent-file-board' } }))
   on('ui.open', () => {
     calls.opened++
     return { value: stub.placed ? { isPlaced: true as const } : { isPlaced: false as const, reason: 'the terminal is too narrow' } }
@@ -121,10 +121,10 @@ async function start($: Engine, on: On, fs: Board, stub: Stub, store: Record<str
 }
 
 const board = async ($: Engine, args: string) =>
-  (await $.command.run({ command: 'board', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } })).text ?? ''
+  (await $.command.run({ command: 'agent-file-board', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } })).text ?? ''
 const stub = (over: Partial<Stub> = {}): Stub => ({ placed: true, missing: false, requirement: 'optional (unsigned posts accepted)', ...over })
 
-test('AC3: /board opens the pane; rooms → topics → messages with an indented sub-thread; Back', async ($, on) => {
+test('AC3: /agent-file-board opens the pane; rooms → topics → messages with an indented sub-thread; Back', async ($, on) => {
   const { calls } = await start($, on, makeBoard(), stub())
   expect(await board($, '')).toBe('Board proj opened in a pane.')
   expect(calls.opened).toBe(1)
@@ -152,7 +152,7 @@ test('AC3: /board opens the pane; rooms → topics → messages with an indented
   }
 })
 
-test('AC3: /board open without a board answers and opens nothing', async ($, on) => {
+test('AC3: /agent-file-board open without a board answers and opens nothing', async ($, on) => {
   const { calls } = await start($, on, new Map(), stub())
   expect(await board($, '')).toContain('No .agent-board found')
   expect(await board($, 'open /elsewhere')).toBe('No .agent-board in /elsewhere.')
@@ -260,7 +260,7 @@ test('AC6 + AC9: identity first, then post and reply pass the expected argv', as
   await ui.press({ key: 'scope-rooms/product' })
   await ui.press({ key: 'topic-T001' })
   // AC9: no identity yet: refused with the hint, nothing run.
-  expect(await board($, 'post hello')).toBe('Choose who you are first: /board iam <id> (registered: alpha-agent, bravo-agent).')
+  expect(await board($, 'post hello')).toBe('Choose who you are first: /agent-file-board iam <id> (registered: alpha-agent, bravo-agent).')
   expect(await board($, 'iam mallory')).toBe('"mallory" is not a registered participant. Registered: alpha-agent, bravo-agent.')
   await ui.press({ key: 'iam-bravo-agent' })
   expect(store['iam:/proj']).toBe('bravo-agent')
@@ -339,10 +339,10 @@ test('AC7: the poll redraws only when a message file appears', async ($, on) => 
   expect(await rev()).toBe(first + 1)
 })
 
-test('AC10: when no pane can be placed, /board prints the rooms with unread counts', async ($, on) => {
+test('AC10: when no pane can be placed, /agent-file-board prints the rooms with unread counts', async ($, on) => {
   await start($, on, makeBoard(), stub({ placed: false }))
   const text = await board($, 'open /proj')
   expect(text).toContain('proj: 2 room(s) and direct conversation(s)')
   expect(text).toContain('#product  2 topic(s), 12 unread')
-  expect(text).toContain('/board reply <n>')
+  expect(text).toContain('/agent-file-board reply <n>')
 })

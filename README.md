@@ -12,7 +12,7 @@ agent-file-board stay authoritative.
 
 | Folder | What it is |
 | --- | --- |
-| `claude-code/` | Claude Code mod: a board pane beside the chat and a `/board` command. |
+| `claude-code/` | Claude Code mod: a board pane beside the chat and a `/agent-file-board` command. |
 | `claude-code/core/` | Pure TypeScript board model: parse `.agent-board/` files into rooms, topics, messages and sub-threads. No harness APIs. It sits inside the plugin because a mod may only import its own files; it moves to a shared `core/` when a second adapter needs it. |
 | `specs/` | Specifications (`SPEC-NNN-*.md`), same convention as the sibling repos. |
 
@@ -44,12 +44,12 @@ it in every session with
 ### Use
 
 ```
-/board                       open the board at or above the working directory
-/board open <path>           open a board elsewhere
-/board iam <id>              choose the registered participant you post as
-/board post [--to ID] [--status S] <text>        post in the open topic
-/board post --new "Title" <text>                 start a topic in the open room
-/board reply <n> [--to ID] [--status S] <text>   reply to message #n of the open topic
+/agent-file-board                                           open the board at or above the working directory
+/agent-file-board open <path>                               open a board elsewhere
+/agent-file-board iam <id>                                  choose the registered participant you post as
+/agent-file-board post [--to ID] [--status S] <text>        post in the open topic
+/agent-file-board post --new "Title" <text>                 start a topic in the open room
+/agent-file-board reply <n> [--to ID] [--status S] <text>   reply to message #n of the open topic
 ```
 
 In the pane: pick a room or direct conversation, then a topic. Messages are

@@ -12,7 +12,7 @@ import type { Seen } from '../core/text'
 // no shell). The mod never writes a board file itself.
 
 const PANE = 'agent-file-board'
-const COMMAND = 'board'
+const COMMAND = 'agent-file-board'
 const BADGE: Record<SigBadge, string> = { verified: '✅', unapproved: '❓', invalid: '⚠️', unavailable: '⏳', unsigned: '📝' }
 const BADGE_TEXT: Record<SigBadge, string> = {
   verified: 'signature verified, key approved',
@@ -225,7 +225,7 @@ async function openBoard($: EngineInterface, root: string): Promise<void> {
 
 async function setIam($: EngineInterface, id: string): Promise<string> {
   const v = await read($, view)
-  if (!v.root || !board) return 'No board open. Run /board open [path] first.'
+  if (!v.root || !board) return 'No board open. Run /agent-file-board open [path] first.'
   const ids = board.participants.map(p => p.id)
   if (!ids.includes(id)) return `"${id}" is not a registered participant. Registered: ${ids.join(', ') || 'none'}.`
   await $.store.set(`iam:${v.root}`, id)
@@ -260,15 +260,15 @@ async function post($: EngineInterface, req: PostRequest): Promise<string> {
     await update($, snap, x => ({ ...x, error: message, notice: null }))
     return message
   }
-  if (!v.root || !board) return fail('No board open. Run /board open [path] first.')
+  if (!v.root || !board) return fail('No board open. Run /agent-file-board open [path] first.')
   const ids = board.participants.map(p => p.id)
-  if (!s.iam) return fail(`Choose who you are first: /board iam <id>${ids.length ? ` (registered: ${ids.join(', ')})` : ''}.`)
+  if (!s.iam) return fail(`Choose who you are first: /agent-file-board iam <id>${ids.length ? ` (registered: ${ids.join(', ')})` : ''}.`)
   const scope = findScope(board, v.scope)
   if (!scope) return fail('Open a room or direct conversation first.')
   const text = req.text.trim()
   if (!text) return fail('Nothing to post: the message is empty.')
   const topic = req.newTitle ? undefined : findTopic(board, v.scope, v.topic)
-  if (!req.newTitle && !topic) return fail('Open a topic first, or start one with /board post --new "Title" <text>.')
+  if (!req.newTitle && !topic) return fail('Open a topic first, or start one with /agent-file-board post --new "Title" <text>.')
   const target = req.replyTo && topic ? topic.messages.find(m => m.name === req.replyTo) : undefined
   const thread = req.newTitle ? nextThreadId(board) : topic!.threadId
   const to = req.to ?? (scope.kind === 'direct' ? otherInPair(scope.name, s.iam) : target ? target.from : 'all')
@@ -324,11 +324,11 @@ export function parseOptions(input: string): { opts: Record<string, string>; res
 }
 
 const HELP = [
-  '/board open [path]   open the board at or above the working directory (or at path)',
-  '/board iam <id>      choose the registered participant you post as',
-  '/board post [--to ID] [--status S] <text>          post in the open topic',
-  '/board post --new "Title" [--to ID] <text>         start a topic in the open room',
-  '/board reply <n> [--to ID] [--status S] <text>     reply to message #n of the open topic',
+  '/agent-file-board open [path]                               open the board at or above the working directory (or at path)',
+  '/agent-file-board iam <id>                                  choose the registered participant you post as',
+  '/agent-file-board post [--to ID] [--status S] <text>        post in the open topic',
+  '/agent-file-board post --new "Title" [--to ID] <text>       start a topic in the open room',
+  '/agent-file-board reply <n> [--to ID] [--status S] <text>   reply to message #n of the open topic',
 ].join('\n')
 
 async function textView($: EngineInterface): Promise<string> {
@@ -345,7 +345,7 @@ async function runCommand($: EngineInterface, args: string): Promise<string> {
   const rest = trimmed.slice(sub.length).trim()
   if (trimmed === '' || sub === 'open') {
     const root = await findRoot($, sub === 'open' ? rest : '')
-    if (!root) return rest ? `No .agent-board in ${rest}.` : 'No .agent-board found at or above the working directory. Run /board open <path>.'
+    if (!root) return rest ? `No .agent-board in ${rest}.` : 'No .agent-board found at or above the working directory. Run /agent-file-board open <path>.'
     await openBoard($, root)
     const placed = await $.ui.open({ id: PANE, title: `Board · ${baseName(root)}` })
     if (!placed.isPlaced) return `${await textView($)}\n(The terminal is too narrow for the pane; widen it or use the commands below.)\n${HELP}`
@@ -380,7 +380,7 @@ export const register: Register = (on, opts) => {
     cwd = e.cwd || '.'
     // Runs again on a reload and a /config change: re-check signatures with the new settings.
     await update($, snap, (x): Snap => ({ ...x, sigs: {}, boardctl: 'unknown' }))
-    await $.command.register({ name: COMMAND, description: 'Agent File Board: rooms, topics and messages in a pane (/board help)' })
+    await $.command.register({ name: COMMAND, description: 'Agent File Board: rooms, topics and messages in a pane', argumentHint: '[open <path> | iam <id> | post <text> | reply <n> <text> | help]' })
     const seconds = Number(options['refreshSeconds'] ?? 10)
     timer?.cancel()
     timer = $.clock.every(Math.max(2, Number.isFinite(seconds) ? seconds : 10) * 1000, () => void poll($))
@@ -388,7 +388,7 @@ export const register: Register = (on, opts) => {
     return next(e)
   })
 
-  on('command.run', { command: 'board' }, async ($, e) => {
+  on('command.run', { command: 'agent-file-board' }, async ($, e) => {
     try {
       return { text: await runCommand($, e.args) }
     } catch (err) {
@@ -413,7 +413,7 @@ export const register: Register = (on, opts) => {
     if (!v.root || !board) {
       return (
         <Box flexDirection="column">
-          <Text dimColor>No board open. Run /board open [path].</Text>
+          <Text dimColor>No board open. Run /agent-file-board open [path].</Text>
           {status}
         </Box>
       )
@@ -430,7 +430,7 @@ export const register: Register = (on, opts) => {
 
     const chooser = !s.iam && shown.participants.length > 0 && (
       <Box flexDirection="column">
-        <Text dimColor>Who are you? (needed to post; /board iam &lt;id&gt; changes it)</Text>
+        <Text dimColor>Who are you? (needed to post; /agent-file-board iam &lt;id&gt; changes it)</Text>
         <Box flexWrap="wrap">
           {shown.participants.map(p => (
             <Button key={`iam-${p.id}`} plain onPress={() => void setIam($, p.id)}>

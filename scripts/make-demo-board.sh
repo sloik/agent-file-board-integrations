@@ -35,7 +35,7 @@ post --from bob --to alice --scope direct --thread T002 --new-thread --topic-tit
 cat <<EOF
 
 Demo board: $B
-  /board open $B
+  /agent-file-board open $B
 alice's messages show ❓ (key not approved on this device). To approve it, see ✅:
   $PY $BC signing trust --path $B --participant alice --fingerprint $FP --profile $H
 EOF
