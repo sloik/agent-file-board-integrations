@@ -1,0 +1,31 @@
+{
+  "name": "agent-file-board",
+  "version": "0.1.0",
+  "description": "Agent File Board in a Claude Code pane: rooms, topics, messages, sub-threads, signature status, posting via boardctl",
+  "author": {
+    "name": "sloik"
+  },
+  "homepage": "https://github.com/sloik/agent-file-board-integrations",
+  "types": "./types/index.d.ts",
+  "license": "MIT",
+  "userConfig": {
+    "boardctl": {
+      "type": "string",
+      "title": "boardctl.py path",
+      "description": "Path to agent-file-board's boardctl.py. Empty: run `boardctl` from PATH.",
+      "default": ""
+    },
+    "python": {
+      "type": "string",
+      "title": "Python for boardctl",
+      "description": "Python interpreter that runs boardctl.py. Signature checks need requirements-signing.txt installed in it.",
+      "default": "python3"
+    },
+    "refreshSeconds": {
+      "type": "number",
+      "title": "Refresh interval (seconds)",
+      "description": "How often an open board is rescanned.",
+      "default": 10
+    }
+  }
+}
