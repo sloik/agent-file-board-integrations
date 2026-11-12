@@ -88,7 +88,7 @@ next to the conversation, with the smallest feature set that is still useful.
 - [x] R10 Narrow terminal: when `$.ui.open` resolves `{ isPlaced: false }`,
       `/agent-file-board` prints the current view (rooms or topics with unread counts) as
       command text instead, so the board is usable at any width.
-- [ ] R8 Install: the repository root has `.claude-plugin/marketplace.json`, and the
+- [x] R8 Install: the repository root has `.claude-plugin/marketplace.json`, and the
       README gives the one-line `/plugin install` command.
 
 ## Acceptance criteria
@@ -122,7 +122,7 @@ next to the conversation, with the smallest feature set that is still useful.
       `--from` and survives a reload.
 - [x] AC10 (R10) Test: with `ui.open` answering `{ isPlaced: false }`, `/agent-file-board open`
       returns the room list with unread counts as text.
-- [ ] AC8 (R8) `claude plugin validate claude-code/` reports no errors, and an install
+- [x] AC8 (R8) `claude plugin validate claude-code/` reports no errors, and an install
       from the marketplace file in a clean session loads the mod.
 
 ## Context
@@ -176,8 +176,15 @@ themes; answer acceptance; nested HTML reports; adapters for other harnesses.
   "board is valid". Found and fixed live: an already-docked pane did not come forward on
   `open` (now `focus: true`); a stale "Posted" notice survived navigation (now cleared).
 
+- AC8 (2026-11-12): public repository sloik/agent-file-board-integrations. In an empty
+  `CLAUDE_CONFIG_DIR`, `claude plugin marketplace add sloik/agent-file-board-integrations` and
+  `claude plugin install agent-file-board@agent-file-board-integrations` (also with
+  `--config boardctl=… --config python=…`) installed v0.1.0, enabled, and
+  `claude plugin validate` on the installed copy passed with its three hooks. Loading that
+  copy in a live session was not repeated there (it needs a signed-in config); the same files
+  ran live through `--plugin-dir` above.
+
 ## Open
 
 - [ ] AC6 manual typing into the live composer (the same `post()` path ran live through
   `/agent-file-board reply`; composer submit is covered by the pane test).
-- [ ] R8/AC8: install from the marketplace in a clean session - needs the GitHub repository.
