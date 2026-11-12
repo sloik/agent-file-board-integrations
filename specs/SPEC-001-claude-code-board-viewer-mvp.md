@@ -1,7 +1,7 @@
 ---
 id: SPEC-001
 title: Claude Code mod - board viewer MVP (rooms, topics, messages, sub-threads, signature status, posting via boardctl)
-status: draft
+status: in_progress
 type: feature
 created: 2026-11-12
 nfrs: []
@@ -28,6 +28,24 @@ next to the conversation, with the smallest feature set that is still useful.
   `boardctl` (`$.process.run`), the single source of truth for format and crypto.
 - v0.1 **shows** signature status. Signed **sending** (key unlock, sign-as) is
   SPEC-002 (v0.2).
+- Plain specs in this repo, no Nightshift registration (owner, 2026-11-12).
+- Q1 and Q2 resolved as proposed (owner, 2026-11-12): see R9 and R10.
+
+## Implementation constraints found while drafting (2026-11-12)
+
+- A mod may import only files inside its own plugin folder. `core/` therefore lives
+  at `claude-code/core/` until a second adapter needs it; it stays pure (R1, AC2)
+  so it can be moved out unchanged.
+- `boardctl` is not on PATH by default. The mod takes its path from a `userConfig`
+  field (`boardctl`, path to `boardctl.py`, run as `python3 <path>`). Empty or
+  unrunnable means R5's "unavailable" state.
+- Ordering uses `DATE` (board-local, compared as normalized text), then
+  `POSTED-AT`, then filename. Exact canonical order across a DST fall-back hour or
+  explicit offsets is not reproduced in v0.1. This is a display-only limitation;
+  the mod never decides validity.
+- `boardctl recent` carries no signature data, so R5 calls `signing inspect` once
+  per message that has a `SIGNATURE:` header, only in the open topic, and caches
+  the result. Messages without the header are unsigned natively.
 
 ## Requirements
 
@@ -50,7 +68,8 @@ next to the conversation, with the smallest feature set that is still useful.
       mod's `$.store`, outside the repository (CONVENTION: read markers live outside
       it). Opening a topic marks it read.
 - [ ] R5 Signature status per message: ✅ verified, ❓ verified but key not approved,
-      ⚠️ invalid, 📝 unsigned. The status comes from `boardctl` (`signing inspect`
+      ⚠️ invalid or excluded (with boardctl's reason), ⏳ verification unavailable,
+      📝 unsigned. The status comes from `boardctl` (`signing inspect`
       or the equivalent batch output), never from crypto inside the mod.
       When `boardctl` is missing the pane still renders and shows "signatures:
       unavailable (boardctl not found)".
@@ -62,14 +81,21 @@ next to the conversation, with the smallest feature set that is still useful.
       that signed sending arrives in SPEC-002.
 - [ ] R7 Refresh: the open pane rescans on a timer (default 10 s, configurable)
       and redraws only when something changed.
+- [ ] R9 Identity ("I am"): before the first post on a board, the mod asks which
+      registered participant (from `participants.json`) the person is, and stores the
+      answer per board in `$.store`. `/board iam <id>` changes it. Posting without a
+      chosen identity is refused with that hint.
+- [ ] R10 Narrow terminal: when `$.ui.open` resolves `{ isPlaced: false }`,
+      `/board` prints the current view (rooms or topics with unread counts) as
+      command text instead, so the board is usable at any width.
 - [ ] R8 Install: the repository root has `.claude-plugin/marketplace.json`, and the
       README gives the one-line `/plugin install` command.
 
 ## Acceptance criteria
 
-- [ ] AC1 (R1) `core` unit tests over a fixture board (copied from
-      agent-file-board `examples/`) and over agent-file-board's own `.agent-board/`
-      produce the expected rooms, topics, titles, message order and sub-thread tree.
+- [ ] AC1 (R1) `core` unit tests over fixture boards packed from agent-file-board
+      `examples/subthreads` and `examples/full-conversation` (no `config.json`; with a
+      direct pair) by a generator script with a freshness check, produce the expected rooms, topics, titles, message order and sub-thread tree.
       A malformed fixture message is reported as invalid. The fixture includes a
       `.DS_Store`, which is ignored.
 - [ ] AC2 (R1) `tsc` passes, and a check proves `core/` imports nothing outside
@@ -81,16 +107,21 @@ next to the conversation, with the smallest feature set that is still useful.
       message and opens no pane.
 - [ ] AC4 (R4) A test seeds `$.store` and shows the unread counts. Opening a topic
       sets that topic to 0, and the counts survive a reload (module re-register).
-- [ ] AC5 (R5) With a stubbed `boardctl`, all four signature states render with
+- [ ] AC5 (R5) With a stubbed `boardctl`, all five signature states render with
       their badges. With `boardctl` absent the pane renders the "unavailable" line.
-      One manual run against a real signed fixture from agent-file-board shows ✅
-      and ❓ correctly.
+      One manual run against a scratch board built with `boardctl init`, `signing
+      keygen` and a signed `post` shows ❓, and ✅ after `signing trust`.
 - [ ] AC6 (R6) With a stubbed `boardctl`, post and reply pass the expected argv
       (no shell). A refusal is surfaced verbatim. A scope that requires signatures
       is refused before any post call. A manual run on a scratch board creates a real
       message file that `boardctl validate` accepts.
 - [ ] AC7 (R7) A test advances `$.clock`: no redraw without a change, one redraw
       after a new message file appears.
+- [ ] AC9 (R9) Test: posting without an identity is refused with the hint.
+      `/board iam` with an unregistered id is refused. A chosen id is used as
+      `--from` and survives a reload.
+- [ ] AC10 (R10) Test: with `ui.open` answering `{ isPlaced: false }`, `/board open`
+      returns the room list with unread counts as text.
 - [ ] AC8 (R8) `claude plugin validate claude-code/` reports no errors, and an install
       from the marketplace file in a clean session loads the mod.
 
@@ -104,7 +135,7 @@ next to the conversation, with the smallest feature set that is still useful.
 - `boardctl` commands used: `post`, `recent`, `signing inspect`, `signing check`, `validate`.
 - Mod API: Claude Code plugin hooks (`$.ui.open` pane + `ui.render`,
   `$.command.register`, `$.fs.read/list`, `$.process.run`, `$.store`, `$.clock`).
-- New files: `core/**`, `claude-code/**`, `.claude-plugin/marketplace.json`, `README.md`.
+- New files: `claude-code/**` (`claude-code/core/**` pure), `.claude-plugin/marketplace.json`, `README.md`.
 
 ## Out of scope (v0.1)
 
@@ -112,10 +143,3 @@ Signed sending and key unlock (SPEC-002); OpenUI reports and typed forms;
 extensions; repair/upgrade/history inventories; follow, claims, presence; drafts;
 themes; answer acceptance; nested HTML reports; adapters for other harnesses.
 
-## Open questions
-
-- Q1 Which identity posts? Proposal: `/board open` asks once per board which
-  registered participant "I am", stored in `$.store`, mirroring the UI's **I am**.
-- Q2 Does a pane opened in a narrow terminal (below 110-144 columns) need a compact
-  fallback (`/board` printing the topic list as text)? Proposal: yes, as text output
-  of the command, with no extra UI.

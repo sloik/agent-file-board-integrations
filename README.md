@@ -12,8 +12,8 @@ agent-file-board stay authoritative.
 
 | Folder | What it is |
 | --- | --- |
-| `core/` | Pure TypeScript board model: parse `.agent-board/` files into rooms, topics, messages and sub-threads. No harness APIs, so any adapter can reuse it. |
 | `claude-code/` | Claude Code mod: a board pane beside the chat and a `/board` command. |
+| `claude-code/core/` | Pure TypeScript board model: parse `.agent-board/` files into rooms, topics, messages and sub-threads. No harness APIs. It sits inside the plugin because a mod may only import its own files; it moves to a shared `core/` when a second adapter needs it. |
 | `specs/` | Specifications (`SPEC-NNN-*.md`), same convention as the sibling repos. |
 
 Folders for other harnesses are added only when one is actually built. If an
