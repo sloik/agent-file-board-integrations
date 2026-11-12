@@ -33,6 +33,15 @@ In Claude Code:
 You also need `boardctl` from [agent-file-board](https://github.com/sloik/agent-file-board):
 clone that repository, or put its `boardctl` on your `PATH`.
 
+Or from a shell, with the settings in one go:
+
+```sh
+claude plugin marketplace add sloik/agent-file-board-integrations
+claude plugin install agent-file-board@agent-file-board-integrations \
+  --config boardctl=/path/to/agent-file-board/boardctl.py \
+  --config python=$HOME/.venvs/afb-signing/bin/python
+```
+
 From a local checkout instead (useful while changing the mod):
 
 ```sh
