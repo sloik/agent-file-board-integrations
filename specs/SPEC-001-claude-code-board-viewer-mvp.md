@@ -22,13 +22,13 @@ next to the conversation, with the smallest feature set that is still useful.
 
 ## Decisions already made (owner, 2026-11-12)
 
-- Own repository: `~/Dropbox/Developer/Repos/agent-file-board-integrations`,
+- Own repository, `agent-file-board-integrations`, next to agent-file-board and agent-file-board-ui,
   laid out for several harnesses (`core/` + one folder per harness).
 - Reads are native (the mod's `$.fs`). Posting and signature checks go through
   `boardctl` (`$.process.run`), the single source of truth for format and crypto.
 - v0.1 **shows** signature status. Signed **sending** (key unlock, sign-as) is
   SPEC-002 (v0.2).
-- Plain specs in this repo, no Nightshift registration (owner, 2026-11-12).
+- Plain `specs/SPEC-NNN-*.md` files, the same convention as the sibling repos (owner, 2026-11-12).
 - Q1 and Q2 resolved as proposed (owner, 2026-11-12): see R9 and R10.
 
 ## Implementation constraints found while drafting (2026-11-12)
